@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1, user-scalable=no" name="viewport"/>
+<title>クロウ＆リプレイのマイホーム（放置）</title>
+<link href="manifest.webmanifest" rel="manifest"/>
+<meta content="#222222" name="theme-color"/>
+
+<style>*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#121418;color:#f3f3f3;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+header{padding:12px 14px;background:#1b1f26;position:sticky;top:0;z-index:2;border-bottom:1px solid #2a2f38}
+h1{font-size:18px;margin:0 0 6px 0}
+.stats{display:flex;gap:16px;flex-wrap:wrap;font-size:14px;opacity:.95}
+main{padding:14px;max-width:960px;margin:0 auto}
+.characters{display:grid;grid-template-columns:1fr;gap:14px}
+@media(min-width:720px){.characters{grid-template-columns:1fr 1fr}}
+.char-card{background:#1b1f26;border:1px solid #2a2f38;border-radius:12px;padding:14px;box-shadow:0 6px 16px rgba(0,0,0,.25)}
+.char-card h2{margin:.2rem 0 .3rem 0;font-size:18px}
+.levels{opacity:.85;margin-bottom:8px}
+.tap-btn{width:100%;padding:14px 12px;border:0;border-radius:10px;background:#2a7cf7;color:#fff;font-size:16px;font-weight:700}
+.tap-btn.secondary{background:#27b36a}
+.tap-btn:active{transform:scale(.98)}
+.sub{font-size:12px;opacity:.8;margin:.4rem 0 0 0}
+.shop{margin-top:10px}
+.shop-grid{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:720px){.shop-grid{grid-template-columns:1fr 1fr 1fr}}
+.shop-item{background:#1b1f26;border:1px solid #2a2f38;border-radius:12px;padding:12px}
+.shop-item h3{margin:.2rem 0 .2rem 0;font-size:16px}
+.shop-item button{margin-top:6px;width:100%;padding:10px;border-radius:8px;border:0;background:#3a3f49;color:#fff;font-weight:700}
+.shop-item button:disabled{opacity:.5}
+.log-wrap{margin-top:10px}
+.log{background:#0e1013;border:1px solid #2a2f38;border-radius:10px;padding:8px;height:160px;overflow:auto;font-size:12px}
+footer{position:sticky;bottom:0;background:#1b1f26;border-top:1px solid #2a2f38;padding:10px;display:flex;gap:8px;align-items:center;justify-content:center}
+footer .danger{background:#a23b3b;color:#fff;border:0;padding:10px 14px;border-radius:8px}
+footer button{background:#3a3f49;color:#fff;border:0;padding:10px 14px;border-radius:8px}
+.ver{margin-left:auto;margin-right:8px;opacity:.6;font-size:12px}
+</style></head>
+<body>
+<header>
+<h1>クロウ＆リプレイのマイホーム</h1>
+<div class="stats">
+<div>💰 お金: <span id="money">0</span></div>
+<div>😊 ハッピー: <span id="happy">0</span> / <span id="happyMax">100</span></div>
+<div>📈 ハッピーボーナス: <span id="happyMult">x1.00</span></div>
+</div>
+</header>
+<main>
+<section class="characters">
+<div class="char-card">
+<h2>クロウ（ゴーレム職人）</h2>
+<div class="levels">Lv.<span id="crowLevel">1</span></div>
+<button class="tap-btn" id="tapCrow">クロウをタップ（💰+<span id="crowTapVal">1</span>）</button>
+<p class="sub">※クロウのレベルを上げるとタップお金↑／ハッピー減少↑</p>
+</div>
+<div class="char-card">
+<h2>リプレイ（家事マスター）</h2>
+<div class="levels">Lv.<span id="replayLevel">1</span></div>
+<button class="tap-btn secondary" id="tapReplay">リプレイをタップ（😊+<span id="replayTapVal">1</span>）</button>
+<p class="sub">※リプレイのレベルを上げるとタップハッピー↑</p>
+</div>
+</section>
+<section class="shop">
+<h2>ショップ</h2>
+<div class="shop-grid">
+<div class="shop-item">
+<h3>自動タップ：ゴーレムコア</h3>
+<p>毎秒 クロウを <b><span id="autoPerSec">0</span></b> 回タップします。</p>
+<button id="buyAuto">購入（💰<span id="autoCost">10</span>）</button>
+<p class="sub">今の所持数：<span id="autoCount">0</span></p>
+</div>
+<div class="shop-item">
+<h3>クロウ レベルアップ</h3>
+<p>タップ💰↑／ハッピー減少↑</p>
+<button id="lvlCrow">上げる（😊<span id="crowLvlCost">10</span>）</button>
+</div>
+<div class="shop-item">
+<h3>リプレイ レベルアップ</h3>
+<p>タップ😊↑</p>
+<button id="lvlReplay">上げる（😊<span id="replayLvlCost">10</span>）</button>
+</div>
+</div>
+</section>
+<section class="log-wrap">
+<h2>ログ</h2>
+<div class="log" id="log"></div>
+</section>
+</main>
+<footer>
+<button id="saveBtn">💾 セーブ</button>
+<button class="danger" id="resetBtn">初期化</button>
+<span class="ver">v0.1 PWA</span>
+</footer>
+
+<script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js');
+      });
+    }
+  </script>
+<script>// ==== 設定（お好みで調整） ====
+const CFG = {
+  tickHz: 10,                 // ゲーム更新頻度（毎秒）
+  baseHappyDecayPerSec: 0.2,  // 基本ハッピー減少/秒
+  extraDecayPerCrowLv: 0.05,  // クロウLv1ごとの追加ハッピー減少/秒
+  happyMaxBase: 100,          // ハッピー最大値
+  happyTapBase: 1,            // リプレイ初期タップ値
+  moneyTapBase: 1,            // クロウ初期タップ値
+  replayTapPerLv: 0.6,        // リプレイLvごとのタップ増加
+  crowTapPerLv: 0.8,          // クロウLvごとのタップ増加
+  happyBonusSlope: 1.0,       // ハッピーが100の時の倍率が x(1 + slope)
+  autoBaseCost: 10,
+  autoCostMult: 1.15,         // 自動タップのコスト上昇
+  levelBaseCost: 10,
+  levelCostMult: 1.25,        // Lvコスト上昇（ハッピー消費）
+  offlineCapHours: 12         // オフライン収益（最大時間）
+};
+
+// ==== ゲーム状態 ====
+let state = {
+  money: 0,
+  happy: 0,
+  happyMax: CFG.happyMaxBase,
+  crowLevel: 1,
+  replayLevel: 1,
+  autoCount: 0,
+  autoCost: CFG.autoBaseCost,
+  crowLvlCost: CFG.levelBaseCost,
+  replayLvlCost: CFG.levelBaseCost,
+  lastTs: Date.now()
+};
+
+// ==== 便利関数 ====
+const $ = (id) => document.getElementById(id);
+const fmt = (n) => {
+  if (n < 1000) return Math.floor(n).toString();
+  const units = ['K','M','B','T','Qa','Qi','Sx','Sp','Oc','No','De'];
+  let u = -1;
+  let x = n;
+  while (x >= 1000 && u < units.length - 1) { x /= 1000; u++; }
+  return x.toFixed(2) + units[u];
+};
+
+function happyMultiplier() {
+  // 例：happy=100のとき x(1 + slope) になる
+  const ratio = Math.max(0, Math.min(1, state.happy / state.happyMax));
+  return 1 + ratio * CFG.happyBonusSlope;
+}
+
+function crowTapValue() {
+  return (CFG.moneyTapBase + (state.crowLevel - 1) * CFG.crowTapPerLv) * happyMultiplier();
+}
+
+function replayTapValue() {
+  return CFG.happyTapBase + (state.replayLevel - 1) * CFG.replayTapPerLv;
+}
+
+function happyDecayPerSec() {
+  return CFG.baseHappyDecayPerSec + (state.crowLevel - 1) * CFG.extraDecayPerCrowLv;
+}
+
+// ==== 入出力/UI ====
+function log(msg) {
+  const el = $('log');
+  const time = new Date().toLocaleTimeString();
+  el.innerHTML = `[${time}] ${msg}<br>` + el.innerHTML;
+}
+
+function refreshUI() {
+  $('money').textContent = fmt(state.money);
+  $('happy').textContent = Math.floor(state.happy);
+  $('happyMax').textContent = Math.floor(state.happyMax);
+  $('happyMult').textContent = 'x' + happyMultiplier().toFixed(2);
+  $('crowLevel').textContent = state.crowLevel;
+  $('replayLevel').textContent = state.replayLevel;
+  $('crowTapVal').textContent = Math.floor(crowTapValue());
+  $('replayTapVal').textContent = Math.floor(replayTapValue());
+  $('autoPerSec').textContent = state.autoCount;
+  $('autoCost').textContent = fmt(state.autoCost);
+  $('autoCount').textContent = state.autoCount;
+  $('crowLvlCost').textContent = Math.floor(state.crowLvlCost);
+  $('replayLvlCost').textContent = Math.floor(state.replayLvlCost);
+}
+
+// ==== セーブ/ロード ====
+const SAVE_KEY = 'crow_replay_idle_save_v01';
+function save() {
+  state.lastTs = Date.now();
+  localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+  log('セーブしました');
+}
+function load() {
+  const s = localStorage.getItem(SAVE_KEY);
+  if (!s) return;
+  try {
+    state = JSON.parse(s);
+  } catch(e) {}
+}
+
+// ==== オフライン収益 ====
+function applyOfflineGains() {
+  const now = Date.now();
+  const dtSec = Math.min((now - state.lastTs) / 1000, CFG.offlineCapHours * 3600);
+  if (dtSec <= 1) return;
+
+  const tapsFromAuto = state.autoCount * dtSec;
+  const moneyGain = tapsFromAuto * crowTapValue(); // ハッピー倍率は最後の値で計算（近似）
+
+  // ハッピーは時間で減少（下限0）
+  const happyLoss = happyDecayPerSec() * dtSec;
+  state.happy = Math.max(0, state.happy - happyLoss);
+
+  state.money += moneyGain;
+  log(`オフライン収益: 💰+${fmt(moneyGain)} / ハッピー -${Math.floor(happyLoss)}`);
+}
+
+// ==== ゲームループ ====
+let acc = 0;
+function tick(dt) {
+  // ハッピー減少
+  state.happy = Math.max(0, state.happy - happyDecayPerSec() * dt);
+
+  // 自動タップによるお金
+  const taps = state.autoCount * dt; // 1秒に autoCount 回
+  state.money += taps * crowTapValue();
+}
+
+function loop(ts) {
+  const now = performance.now();
+  const dt = 1 / CFG.tickHz;
+  acc += dt;
+  tick(dt);
+  refreshUI();
+  setTimeout(loop, 1000 / CFG.tickHz);
+}
+
+// ==== 操作 ====
+$('tapCrow').addEventListener('click', () => {
+  const gain = crowTapValue();
+  state.money += gain;
+  refreshUI();
+});
+
+$('tapReplay').addEventListener('click', () => {
+  state.happy = Math.min(state.happyMax, state.happy + replayTapValue());
+  refreshUI();
+});
+
+$('buyAuto').addEventListener('click', () => {
+  if (state.money < state.autoCost) return;
+  state.money -= state.autoCost;
+  state.autoCount += 1;
+  state.autoCost = Math.floor(state.autoCost * CFG.autoCostMult);
+  refreshUI();
+  log('ゴーレムコアを購入しました（自動タップ+1/秒）');
+});
+
+$('lvlCrow').addEventListener('click', () => {
+  if (state.happy < state.crowLvlCost) return;
+  state.happy -= state.crowLvlCost;
+  state.crowLevel += 1;
+  state.crowLvlCost = Math.floor(state.crowLvlCost * CFG.levelCostMult);
+  refreshUI();
+  log('クロウのレベルが上がった！💰タップ↑／ハッピー減少↑');
+});
+
+$('lvlReplay').addEventListener('click', () => {
+  if (state.happy < state.replayLvlCost) return;
+  state.happy -= state.replayLvlCost;
+  state.replayLevel += 1;
+  state.replayLvlCost = Math.floor(state.replayLvlCost * CFG.levelCostMult);
+  refreshUI();
+  log('リプレイのレベルが上がった！😊タップ↑');
+});
+
+$('saveBtn').addEventListener('click', save);
+$('resetBtn').addEventListener('click', () => {
+  if (!confirm('本当に初期化しますか？')) return;
+  localStorage.removeItem(SAVE_KEY);
+  location.reload();
+});
+
+// ==== 起動 ====
+load();
+applyOfflineGains();
+state.lastTs = Date.now();
+refreshUI();
+setTimeout(loop, 1000 / CFG.tickHz);
+</script></body>
+</html>
